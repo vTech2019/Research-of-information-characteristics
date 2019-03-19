@@ -1,6 +1,7 @@
 ﻿#include <Windows.h>
 #include <stdio.h>
-
+#include "glm/glm/glm.hpp"
+#include "glm/glm/matrix.hpp"
 #define GLEW_STATIC
 #include "glew-2.1.0/include/GL/glew.h"
 #define _USE_MATH_DEFINES
@@ -20,40 +21,71 @@ const char* codeVertexShader =
 const char* codeFragmentShader =
 #include "fragmentShader.glsl"
 ;
+struct uint2 {
+	uint32_t x, y;
+	uint2 operator -(uint2 data) {
+		return uint2{ x - data.x, y - data.y };
+	}
+};
+struct vec4 {
+	GLfloat x, y, z, w;
+	vec4 operator +(vec4 data) {
+		return vec4{ x + data.x, y + data.y, z + data.z,w + data.w };
+	}
+	vec4 operator *(GLfloat data) {
+		return vec4{ x * data, y * data, z * data,w * data };
+	}
+	vec4 operator *(vec4 data) {
+		return vec4{ x * data.x, y * data.y, z * data.z,w * data.w };
+	}
+	vec4 operator -(vec4 data) {
+		return vec4{ x - data.x, y - data.y, z - data.z,w - data.w };
+	}
+	vec4 operator =(vec4 data) {
+		return vec4{ x = data.x, y = data.y, z = data.z,w = data.w };
+	}
+};
 GLuint program;
 GLuint data_buffer;
 GLuint color_buffer;
 GLuint indices_buffer;
 GLuint number_objects;
-GLuint width = 200;
-GLuint height = 200;
+GLuint width = 2000;
+GLuint height = 2000;
 GLfloat near_draw_x = -1.0f;
 GLfloat near_draw_y = -1.0f;
 GLfloat near_draw_z = 0.0001f;
 GLfloat far_draw_x = 1.0f;
 GLfloat far_draw_y = 1.0f;
 GLfloat far_draw_z = 100.0f;
-GLfloat projectionMatrix[16];
-GLfloat viewMatrix[16];
-GLfloat modelMatrix[16];
-GLfloat Up[3];
-GLfloat Center[3];
-GLfloat Eye[3];
+vec4 projectionMatrix[4];
+vec4 viewMatrix[4];
+vec4 modelMatrix[4];
+vec4 Up;
+vec4 Center;
+vec4 Eye;
 GLint projection_matrix_index;
 GLint model_matrix_index;
 GLint view_matrix_index;
+uint32_t mouse_wheel;
+uint2 new_mouse_position;
+uint2 old_mouse_position;
 int main()
 {
-	for (size_t i = 0; i < 4; i++)
-		for (size_t j = 0; j < 4; j++)
-			if (i == j)
-				projectionMatrix[i * 4 + j] = 1,
-				modelMatrix[i * 4 + j] = 1,
-				viewMatrix[i * 4 + j] = 1;
-			else
-				projectionMatrix[i * 4 + j] = 0,
-				modelMatrix[i * 4 + j] = 0,
-				viewMatrix[i * 4 + j] = 0;
+	mouse_wheel = 0;
+	projectionMatrix[0] = vec4{ 1.0f, 0.0f, 0.0f, 0.0f };
+	modelMatrix[0] = vec4{ 1.0f, 0.0f, 0.0f, 0.0f };
+	viewMatrix[0] = vec4{ 1.0f, 0.0f, 0.0f, 0.0f };
+	projectionMatrix[1] = vec4{ 0.0f, 1.0f, 0.0f, 0.0f };
+	modelMatrix[1] = vec4{ 0.0f, 1.0f, 0.0f, 0.0f };
+	viewMatrix[1] = vec4{ 0.0f, 1.0f, 0.0f, 0.0f };
+	projectionMatrix[2] = vec4{ 0.0f, 0.0f, 1.0f, 0.0f };
+	modelMatrix[2] = vec4{ 0.0f, 0.0f, 1.0f, 0.0f };
+	viewMatrix[2] = vec4{ 0.0f, 0.0f, 1.0f, 0.0f };
+	projectionMatrix[3] = vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+	modelMatrix[3] = vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+	viewMatrix[3] = vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+
 	HMODULE Instance = GetModuleHandle(NULL);
 	HWND hwnd;
 	MSG msg = { 0 };
@@ -91,7 +123,7 @@ int main()
 	if (glewInit() != GLEW_OK)
 		MessageBox(NULL, "Error", "Error init glew!", MB_OK);
 	glewExperimental = GL_TRUE;
-	glPointSize(15.0f);
+	//glPointSize(15.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	ShowWindow(hwnd, SW_SHOW);
@@ -108,12 +140,12 @@ int main()
 	}
 	return msg.wParam;
 }
-//GLfloat function(float x, float y) {
-//	return 1.0f - x * x + y * y;
-//}
 GLfloat function(float x, float y) {
-	return  x * x + y * y;
+	return 1.0f - x * x + y * y;
 }
+//GLfloat function(float x, float y) {
+//	return  x * x + y * y;
+//}
 GLfloat* genPositions(GLint width, GLint height, GLfloat& max, GLfloat& min) {
 	GLfloat* position = (GLfloat*)malloc(width * height * 3 * sizeof(GLfloat));
 	GLint start_h = -height / 2;
@@ -156,187 +188,85 @@ GLuint* genIndices(GLint length) {
 	}
 	return index;
 }
-void cross_vec3(GLfloat* matrix_1, GLfloat* matrix_2, GLfloat* result) {
-	result[0] = matrix_1[1] * matrix_2[2] - matrix_1[2] * matrix_1[1];
-	result[1] = matrix_1[2] * matrix_2[0] - matrix_1[0] * matrix_1[2];
-	result[2] = matrix_1[0] * matrix_2[1] - matrix_1[1] * matrix_1[0];
+vec4 cross_vec3(vec4 matrix_1, vec4 matrix_2) {
+	vec4 vector_1_1 = vec4{ matrix_1.y, matrix_1.z, matrix_1.x, 0.0f };
+	vec4 vector_1_2 = vec4{ matrix_1.z, matrix_1.x, matrix_1.y, 0.0f };
+	vec4 vector_2_1 = vec4{ matrix_2.z, matrix_2.x, matrix_2.y, 0.0f };
+	vec4 vector_2_2 = vec4{ matrix_2.y, matrix_2.z, matrix_2.x, 0.0f };
+	return vec4{ vector_1_1 * vector_2_1 - vector_1_2 * vector_2_2 };
 }
-void normalize_vec3(GLfloat* matrix, GLfloat* result) {
-	GLfloat vector = sqrt((matrix[0] * matrix[0]) + (matrix[1] * matrix[1]) + (matrix[2] * matrix[2]));
-	result[0] = matrix[0] / vector;
-	result[1] = matrix[1] / vector;
-	result[2] = matrix[2] / vector;
+vec4 normalize_vec3(vec4 matrix) {
+	GLfloat vector = 1.0f / sqrtf((matrix.x * matrix.x) + (matrix.y * matrix.y) + (matrix.z * matrix.z));
+	return matrix * vector;
 }
-void rotate(GLfloat* modelView, GLfloat angle, GLfloat* vector) {
+void rotate(vec4* modelView, GLfloat angle, vec4 vector) {
 	GLfloat cosine = cos(angle);
 	GLfloat sine = sin(angle);
-	normalize_vec3(vector, vector);
-	GLfloat temp_x = (1.0f - cosine) * vector[0];
-	GLfloat temp_y = (1.0f - cosine) * vector[1];
-	GLfloat temp_z = (1.0f - cosine) * vector[2];
-
-	GLfloat Rotate[4][4];
-	GLfloat Result[16];
-	Rotate[0][0] = cosine + temp_x * vector[0];
-	Rotate[0][1] = temp_x * vector[1] + sine * vector[2];
-	Rotate[0][2] = temp_x * vector[2] - sine * vector[1];
-
-	Rotate[1][0] = temp_y * vector[0] - sine * vector[2];
-	Rotate[1][1] = cosine + temp_y * vector[1];
-	Rotate[1][2] = temp_y * vector[2] + sine * vector[0];
-
-	Rotate[2][0] = temp_z * vector[0] + sine * vector[1];
-	Rotate[2][1] = temp_z * vector[1] - sine * vector[0];
-	Rotate[2][2] = cosine + temp_z * vector[2];
-
-	Result[0 * 4] = modelView[0 * 4] * Rotate[0][0] + modelView[1 * 4] * Rotate[0][1] + modelView[2 * 4] * Rotate[0][2];
-	Result[0 * 4 + 1] = modelView[0 * 4 + 1] * Rotate[0][0] + modelView[1 * 4 + 1] * Rotate[0][1] + modelView[2 * 4 + 1] * Rotate[0][2];
-	Result[0 * 4 + 2] = modelView[0 * 4 + 2] * Rotate[0][0] + modelView[1 * 4 + 2] * Rotate[0][1] + modelView[2 * 4 + 2] * Rotate[0][2];
-	Result[0 * 4 + 3] = modelView[0 * 4 + 3] * Rotate[0][0] + modelView[1 * 4 + 3] * Rotate[0][1] + modelView[2 * 4 + 3] * Rotate[0][2];
-	Result[1 * 4] = modelView[0 * 4] * Rotate[1][0] + modelView[1 * 4] * Rotate[1][1] + modelView[2 * 4] * Rotate[1][2];
-	Result[1 * 4 + 1] = modelView[0 * 4 + 1] * Rotate[1][0] + modelView[1 * 4 + 1] * Rotate[1][1] + modelView[2 * 4 + 1] * Rotate[1][2];
-	Result[1 * 4 + 2] = modelView[0 * 4 + 2] * Rotate[1][0] + modelView[1 * 4 + 2] * Rotate[1][1] + modelView[2 * 4 + 2] * Rotate[1][2];
-	Result[1 * 4 + 3] = modelView[0 * 4 + 3] * Rotate[1][0] + modelView[1 * 4 + 3] * Rotate[1][1] + modelView[2 * 4 + 3] * Rotate[1][2];
-	Result[2 * 4] = modelView[0 * 4] * Rotate[2][0] + modelView[1 * 4] * Rotate[2][1] + modelView[2 * 4] * Rotate[2][2];
-	Result[2 * 4 + 1] = modelView[0 * 4 + 1] * Rotate[2][0] + modelView[1 * 4 + 1] * Rotate[2][1] + modelView[2 * 4 + 1] * Rotate[2][2];
-	Result[2 * 4 + 2] = modelView[0 * 4 + 2] * Rotate[2][0] + modelView[1 * 4 + 2] * Rotate[2][1] + modelView[2 * 4 + 2] * Rotate[2][2];
-	Result[2 * 4 + 3] = modelView[0 * 4 + 3] * Rotate[2][0] + modelView[1 * 4 + 3] * Rotate[2][1] + modelView[2 * 4 + 3] * Rotate[2][2];
-	Result[3 * 4] = modelView[3 * 4];
-	Result[3 * 4 + 1] = modelView[3 * 4 + 1];
-	Result[3 * 4 + 2] = modelView[3 * 4 + 2];
-	Result[3 * 4 + 3] = modelView[3 * 4 + 3];
-	for (size_t i = 0; i < 16; i++)
-		modelView[i] = Result[i];
+	vector = normalize_vec3(vector);
+	vec4 temp = vector * (1.0f - cosine);
+	vec4 Rotate[3];
+	vec4 Result[3];
+	vec4 angle_data = vec4{ cosine , sine * vector.z, -sine * vector.y, 0.0f };
+	Rotate[0] = vector * temp.x + angle_data;
+	angle_data = vec4{ -sine * vector.z , cosine, sine * vector.x, 0.0f };
+	Rotate[1] = vector * temp.y + angle_data;
+	angle_data = vec4{ sine * vector.y ,  -sine * vector.x,cosine, 0.0f };
+	Rotate[2] = vector * temp.z + angle_data;
+	Result[0] = modelView[0] * Rotate[0].x + modelView[1] * Rotate[0].y + modelView[2] * Rotate[0].z;
+	Result[1] = modelView[0] * Rotate[1].x + modelView[1] * Rotate[1].y + modelView[2] * Rotate[1].z;
+	Result[2] = modelView[0] * Rotate[2].x + modelView[1] * Rotate[2].y + modelView[2] * Rotate[2].z;
+	modelView[0] = Result[0];
+	modelView[1] = Result[1];
+	modelView[2] = Result[2];
 }
-void lookAt(GLfloat* matrix) {
-	float fx = Center[0] - Eye[0];
-	float fy = Center[1] - Eye[1];
-	float fz = Center[2] - Eye[2];
-	float normalizeVector = 1.0f / sqrtf(fx*fx + fy * fy + fz * fz);
-	fx *= normalizeVector;
-	fy *= normalizeVector;
-	fz *= normalizeVector;
-	float sx = fy * Up[2] - fz * Up[1];
-	float sy = fz * Up[0] - fx * Up[2];
-	float sz = fx * Up[1] - fy * Up[0];
-	normalizeVector = 1.0f / sqrtf(sx*sx + sy * sy + sz * sz);
-	sx *= normalizeVector;
-	sy *= normalizeVector;
-	sz *= normalizeVector;
-	if ((0 == sx) && (0 == sy) && (0 == sz))
-		return;
-	float ux = sy * fz - sz * fy;
-	float uy = sz * fx - sx * fz;
-	float uz = sx * fy - sy * fx;
-	matrix[0] = sx;
-	matrix[1] = ux;
-	matrix[2] = -fx;
-	matrix[3] = 0.0f;
-	matrix[4] = sy;
-	matrix[5] = uy;
-	matrix[6] = -fy;
-	matrix[7] = 0.0f;
-	matrix[8] = sz;
-	matrix[9] = uz;
-	matrix[10] = -fz;
-	matrix[11] = 0.0f;
-	matrix[12] = 0.0f;
-	matrix[13] = 0.0f;
-	matrix[14] = 0.0f;
-	matrix[15] = 1.0f;
-	matrix[12] += matrix[0] * -Eye[0] + matrix[4] * -Eye[1] +
-		matrix[8] * -Eye[2];
-	matrix[13] += matrix[1] * -Eye[0] + matrix[5] * -Eye[1] +
-		matrix[9] * -Eye[2];
-	matrix[14] += matrix[2] * -Eye[0] + matrix[6] * -Eye[1] +
-		matrix[10] * -Eye[2];
-	matrix[15] += matrix[3] * -Eye[0] + matrix[7] * -Eye[1] +
-		matrix[11] * -Eye[2];
-
+void lookAt(vec4* matrix) {
+	vec4 z = Eye - Center;
+	z = normalize_vec3(z);
+	vec4 x = cross_vec3(Up, z);
+	x = normalize_vec3(x);
+	vec4 y = cross_vec3(z, x);
+	y = normalize_vec3(y);
+	matrix[0] = { x.x, y.x, z.x, 0.0f };
+	matrix[1] = { x.y, y.y, z.y, 0.0f };
+	matrix[2] = { x.z, y.z, z.z, 0.0f };
+	matrix[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
 }
-void genModel(GLfloat* modelView, GLfloat angle, GLfloat* vector) {
+void genModel(vec4* modelView, GLfloat angle, vec4 vector) {
 	rotate(modelMatrix, angle, vector);
 }
 void genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV) {
 	GLfloat aspect = width / height;
 	GLfloat depth = z_far - z_near;
 	GLfloat tanFOV = tan(FOV * 0.5f);
-	projectionMatrix[0] = 1.0f / (aspect * tanFOV);
-	projectionMatrix[5] = 1.0f / tanFOV;
-	projectionMatrix[10] = -(z_far + z_near) / depth;
-	projectionMatrix[11] = -1.0f;
-	projectionMatrix[14] = -2.0f * (z_far * z_near) / depth;
+	projectionMatrix[0].x = 1.0f / (aspect * tanFOV);
+	projectionMatrix[1].y = 1.0f / tanFOV;
+	projectionMatrix[2].z = -(z_far + z_near) / depth;
+	projectionMatrix[2].w = 2.0f * (z_far * z_near) / depth;
+	projectionMatrix[3].z = -1.0f;
 }
-void genModelView(GLfloat* matrix) {
+void genModelView(vec4* matrix) {
 	lookAt(matrix);
-	/*float fx = Center[0] - Eye[0];
-	float fy = Center[1] - Eye[1];
-	float fz = Center[2] - Eye[2];
-	float normalizeVector = 1.0f / sqrtf(fx*fx + fy * fy + fz * fz);
-	fx *= normalizeVector;
-	fy *= normalizeVector;
-	fz *= normalizeVector;
-	float sx = fy * Up[2] - fz * Up[1];
-	float sy = fz * Up[0] - fx * Up[2];
-	float sz = fx * Up[1] - fy * Up[0];
-	normalizeVector = 1.0f / sqrtf(sx*sx + sy * sy + sz * sz);
-	sx *= normalizeVector;
-	sy *= normalizeVector;
-	sz *= normalizeVector;
-	if ((0 == sx) && (0 == sy) && (0 == sz))
-		return;
-	float ux = sy * fz - sz * fy;
-	float uy = sz * fx - sx * fz;
-	float uz = sx * fy - sy * fx;
-	matrix[0] = sx;
-	matrix[1] = ux;
-	matrix[2] = -fx;
-	matrix[3] = 0.0f;
-	matrix[4] = sy;
-	matrix[5] = uy;
-	matrix[6] = -fy;
-	matrix[7] = 0.0f;
-	matrix[8] = sz;
-	matrix[9] = uz;
-	matrix[10] = -fz;
-	matrix[11] = 0.0f;
-	matrix[12] = 0.0f;
-	matrix[13] = 0.0f;
-	matrix[14] = 0.0f;
-	matrix[15] = 1.0f;
-	matrix[12] += matrix[0] * -Eye[0] + matrix[4] * -Eye[1] +
-		matrix[8] * -Eye[2];
-	matrix[13] += matrix[1] * -Eye[0] + matrix[5] * -Eye[1] +
-		matrix[9] * -Eye[2];
-	matrix[14] += matrix[2] * -Eye[0] + matrix[6] * -Eye[1] +
-		matrix[10] * -Eye[2];
-	matrix[15] += matrix[3] * -Eye[0] + matrix[7] * -Eye[1] +
-		matrix[11] * -Eye[2];*/
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	GLfloat vector[3] = { 0.0f, 0.0, 1.0f };
+	vec4 vector = { 0.0f, 1.0, 0.0f, 0.0f };
 	HDC hDC;
 	PAINTSTRUCT ps;
 	switch (uMsg) {
 	case WM_CREATE: {
-		Center[0] = 0;
-		Center[1] = 0;
-		Center[2] = 0;
-		Eye[0] = -1.0f;
-		Eye[1] = -1.0f;
-		Eye[2] = 1.0f;
-		Up[0] = 0.0;
-		Up[1] = 0.0f;
-		Up[2] = 1.0;	
-		GLfloat cameraDirection[3];
-		GLfloat cameraRight[3];
-		normalize_vec3(Eye, cameraDirection);
-		cross_vec3(cameraDirection, Up, cameraRight);
-		normalize_vec3(cameraRight, cameraRight);
-		cross_vec3(cameraRight, cameraDirection, Up);
+		Center = vec4{ 0.0f,0.0f,0.0f,0.0f };
+		Eye = vec4{ 0.0f,0.0f,1.0f,0.0f };
+		Up = vec4{ 0.0f,1.0f,0.0f,0.0f };
+		vec4 cameraRight;
+		vec4 cameraDirection = normalize_vec3(Eye);
+		cameraRight = cross_vec3(Up, cameraDirection);
+		cameraRight = normalize_vec3(cameraRight);
+		Up = cross_vec3(cameraRight, cameraDirection);
 		lookAt(modelMatrix);
+		RECT rect;
+		GetWindowRect(hWnd, &rect);
+		genProjection(rect.right - rect.left, rect.bottom - rect.top, 100.0f, -100.0f, 45.0f);
 		break;
 	}
 	case WM_SHOWWINDOW: {
@@ -414,15 +344,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case WM_SIZING: {
+	}
+	case WM_SIZE: {
 		RECT rect;
 		GetWindowRect(hWnd, &rect);
 		glViewport(0, 0, rect.right - rect.left, rect.bottom - rect.top);
-		genProjection(rect.right - rect.left, rect.bottom - rect.top, -0.001f, 100.0f, 45.0f);
+		genProjection(rect.right - rect.left, rect.bottom - rect.top, 100.0f, -100.0f, 45.0f);
+		InvalidateRect(hWnd, 0, TRUE);
+		break;
+	}
+	case WM_MOUSEWHEEL: {
+		mouse_wheel += GET_WHEEL_DELTA_WPARAM(wParam) / 120;
+		InvalidateRect(hWnd, 0, TRUE);
+		break;
+	}
+	case WM_LBUTTONDOWN:
+		break;
+	case WM_MOUSEMOVE: {
+		if (UINT(wParam) & MK_LBUTTON)
+		{
+			uint2 mouse_delta = new_mouse_position - old_mouse_position;
+			if (sqrt(mouse_delta.x*mouse_delta.x + mouse_delta.y*mouse_delta.y) > 50) {
+				old_mouse_position = new_mouse_position;
+				break;
+			}
+
+				mouse_point.x = LOWORD(lParam);
+			mouse_point.y = HIWORD(lParam);
+
+			Center = vec4{ 0.0f,0.0f,0.0f,0.0f };
+			Up = vec4{ 0.0f,1.0f,0.0f,0.0f };
+			vec4 cameraDirection = normalize_vec3(Eye);
+			vec4 cameraRight = cross_vec3(Up, cameraDirection);
+			cameraRight = normalize_vec3(cameraRight);
+			Up = cross_vec3(cameraRight, cameraDirection);
+			lookAt(modelMatrix);
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
 		break;
 	}
 	case WM_PAINT: {
-
-		GLfloat angle =0;
+		GLfloat angle = GetTickCount64() / 1000000000.0f;
 		rotate(modelMatrix, angle, vector);
 		hDC = BeginPaint(hWnd, &ps);
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -431,9 +393,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
 		glEnableClientState(GL_INDEX_ARRAY);
-		glUniformMatrix4fv(projection_matrix_index, 1, GL_FALSE, projectionMatrix);
-		glUniformMatrix4fv(view_matrix_index, 1, GL_FALSE, viewMatrix);
-		glUniformMatrix4fv(model_matrix_index, 1, GL_FALSE, modelMatrix);
+		glUniformMatrix4fv(projection_matrix_index, 1, GL_FALSE, (GLfloat*)projectionMatrix);
+		glUniformMatrix4fv(view_matrix_index, 1, GL_FALSE, (GLfloat*)viewMatrix);
+		glUniformMatrix4fv(model_matrix_index, 1, GL_FALSE, (GLfloat*)modelMatrix);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices_buffer);
 		glDrawElements(GL_POINTS, number_objects, GL_UNSIGNED_INT, NULL);
 		glDisableClientState(GL_VERTEX_ARRAY);
