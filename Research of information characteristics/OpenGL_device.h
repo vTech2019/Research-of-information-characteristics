@@ -3,14 +3,17 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
-#define DEBUG
+#pragma intrinsic(sin, cos)
 
 enum { GL_VECTOR_BUFFER, GL_COLOR_BUFFER, GL_INDEX_BUFFER };
 class OpenGL_device
 {
+	mat4x4 projectionMatrix;
+	mat4x4 viewMatrix;
+	mat4x4 modelMatrix;
+
 	GLuint last_program;
 	std::vector<GLuint> programs;
-
 
 	std::vector<GLuint> vertexShaders;
 	std::vector<GLuint> fragmentShaders;
@@ -18,48 +21,47 @@ class OpenGL_device
 
 	std::vector<GLuint> indicesShaders;
 
-	mat4x4 projectionMatrix;
-	mat4x4 viewMatrix;
-	mat4x4 modelMatrix;
-
-	float4 Up = { 0.0f, 1.0f, 0.0f, 0.0f };
-	float4 Center = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float4 Eye = { 0.0f,0.0f, 1.0f, 0.0f };
-
-	uint32_t mouse_wheel;
-
-	uint2 new_mouse_position;
-	uint2 old_mouse_position;
-
 	std::vector<GLint> projection_matrix_index;
 	std::vector<GLint> model_matrix_index;
 	std::vector<GLint> view_matrix_index;
 	std::vector<GLint> vertex_index;
 	std::vector<GLint> color_index;
 	std::vector<GLint> normal_index;
+
+	float4 Up = { 0.0f, 1.0f, 0.0f, 0.0f };
+	float4 Center = { 0.0f, 0.0f, -1.0f, 0.0f };
+	float4 Eye = { 0.0f, 0.0f, 1.0f, 0.0f };
+
+	uint32_t mouse_wheel;
+
 	HGLRC gl_context;
 public:
+	int2 new_mouse_position;
+	int2 old_mouse_position;
+	GLfloat y_angle = -90.0f;
+	GLfloat x_angle = 0.0f;
+	GLulong delta_time = 0;
+	GLulong last_frame = 0;
 	std::vector<size_t> number_objects;
 	std::vector<GLuint> vector_buffer;
 	std::vector<GLuint> color_buffer;
 	std::vector<GLuint> index_buffer;
 	std::vector<uint2> textures;
 
-	bool push_program();
-	mat4x4 rotate(GLfloat angle, float4 vector);
+	void rotate(GLfloat angle, float4 vector);
 	void lookAt(float4 Eye, float4 Up, float4 Center);
 	void genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV);
 	void checkErrorShader(GLuint shader, const GLchar* text, GLuint status);
 	void programInfoLog(GLuint shader);
 	size_t push2DTexture(GLubyte4* image, GLuint width, GLuint height);
 	bool pushShader(GLuint typeShader, GLchar* code, size_t length);
-	size_t pushProgram(); 
+	size_t pushProgram();
 
 	std::vector<GLuint>::iterator pushBuffer(void* data, size_t number_objects, size_t length_object, size_t typeBuffer);
 
-	void setMouseOldPosition(uint2 data);
+	void setMouseOldPosition(int2 data);
 
-	void setMouseNewPosition(uint2 data);
+	void setMouseNewPosition(int2 data);
 
 	mat4x4* getViewMatrix();
 
@@ -80,4 +82,3 @@ public:
 	OpenGL_device();
 	~OpenGL_device();
 };
-

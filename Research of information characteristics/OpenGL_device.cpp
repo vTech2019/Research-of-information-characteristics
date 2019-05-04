@@ -187,11 +187,11 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 	}
 	return std::vector<GLuint>::iterator();
 }
-void OpenGL_device::setMouseOldPosition(uint2 data) {
+void OpenGL_device::setMouseOldPosition(int2 data) {
 	old_mouse_position = data;
 }
 
-void OpenGL_device::setMouseNewPosition(uint2 data) {
+void OpenGL_device::setMouseNewPosition(int2 data) {
 	new_mouse_position = data;
 }
 mat4x4* OpenGL_device::getModelMatrix() {
@@ -216,16 +216,16 @@ float4* OpenGL_device::getEyeView() {
 
 void OpenGL_device::cameraRotate()
 {
-	lookAt(Eye, Up, Center);
+	lookAt(Eye, Up, Eye + Center);
 }
-GLfloat t_1 = 0.0f;
-GLfloat t_2 = 0.0f;
+//GLfloat t_1 = 0.0f;
+//GLfloat t_2 = 0.0f;
 void OpenGL_device::Render() {
 
-	getEyeView()->x = sin(t_1 += 0.01f) * 5;
-	getEyeView()->z = cos(t_2 += 0.01f) * 5;
-	lookAt(Eye, Up, Center);
-	//modelMatrix = rotate(0.001, float4(0, 0, 1, 0));
+	//getEyeView()->x = sin(t_1 += 0.01f) * 5;
+	//getEyeView()->z = cos(t_2 += 0.01f) * 5;
+	//lookAt(Eye, Up, Center);
+	//rotate(0.001, float4(0, 0, 1, 0));
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -335,20 +335,21 @@ OpenGL_device::~OpenGL_device()
 	glDeleteBuffers(index_buffer.size(), index_buffer.data());
 }
 
-mat4x4 OpenGL_device::rotate(GLfloat angle, float4 vector) {
-	GLfloat cosine = cosf(angle);
-	GLfloat sine = sinf(angle);
+void OpenGL_device::rotate(GLfloat angle, float4 vector) {
+	GLfloat cosine = cos(angle);
+	GLfloat sine = sin(angle);
 	vector = normalize_vec3(vector);
 	float4 temp = vector * (1.0f - cosine);
-	float4 Rotate[3];
+	float4 Rotate_x;
+	float4 Rotate_y;
+	float4 Rotate_z;
 	mat4x4 Result = viewMatrix;
-	Rotate[0] = vector * temp.x + float4(cosine, sine * vector.z, -sine * vector.y, 0.0f);
-	Rotate[1] = vector * temp.y + float4(-sine * vector.z, cosine, sine * vector.x, 0.0f);
-	Rotate[2] = vector * temp.z + float4(sine * vector.y, -sine * vector.x, cosine, 0.0f);
-	viewMatrix.x = Result.x * Rotate[0].x + Result.y * Rotate[0].y + Result.z * Rotate[0].z;
-	viewMatrix.y = Result.x * Rotate[1].x + Result.y * Rotate[1].y + Result.z * Rotate[1].z;
-	viewMatrix.z = Result.x * Rotate[2].x + Result.y * Rotate[2].y + Result.z * Rotate[2].z;
-	return viewMatrix;
+	Rotate_x = vector * temp.x + float4(cosine, sine * vector.z, -sine * vector.y, 0.0f);
+	Rotate_y = vector * temp.y + float4(-sine * vector.z, cosine, sine * vector.x, 0.0f);
+	Rotate_z = vector * temp.z + float4(sine * vector.y, -sine * vector.x, cosine, 0.0f);
+	viewMatrix.x = Result.x * Rotate_x.x + Result.y * Rotate_x.y + Result.z * Rotate_x.z;
+	viewMatrix.y = Result.x * Rotate_y.x + Result.y * Rotate_y.y + Result.z * Rotate_y.z;
+	viewMatrix.z = Result.x * Rotate_z.x + Result.y * Rotate_z.y + Result.z * Rotate_z.z;
 }
 void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 
@@ -365,7 +366,10 @@ void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 	modelMatrix.y = { x.y, y.y, z.y, 0.0f };
 	modelMatrix.z = { x.z, y.z, z.z, 0.0f };
 	modelMatrix.w = { 0.0f, 0.0f, 0.0f, 1.0f };
-	modelMatrix = modelMatrix * translation;
+	modelMatrix.x.w = -x.x * Eye.x - y.x * Eye.y - z.x * Eye.z;
+	modelMatrix.y.w = -x.y * Eye.x - y.y * Eye.y - z.y * Eye.z;
+	modelMatrix.z.w = -x.z * Eye.x - y.z * Eye.y - z.z * Eye.z;
+	//modelMatrix = modelMatrix * translation;
 }
 void OpenGL_device::genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV) {
 	GLfloat aspect = width / height;

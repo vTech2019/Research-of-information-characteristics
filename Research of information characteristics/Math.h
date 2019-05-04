@@ -28,6 +28,16 @@ struct uint2 {
 	}
 };
 
+struct int2 {
+	int32_t x, y;
+	void operator =(int2 data) {
+		x = data.x, y = data.y;
+	}
+	int2 operator -(int2 data) {
+		return int2{ x - data.x, y - data.y };
+	}
+};
+
 struct float2 {
 	GLfloat x, y;
 
