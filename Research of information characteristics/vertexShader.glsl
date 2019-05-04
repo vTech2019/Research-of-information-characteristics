@@ -1,23 +1,22 @@
-R"TEXT(
+R"(
 #version 430 core
 
-in vec3 positions;
-in vec3 colors;
+in vec4 position;
+in vec4 color;
 
 uniform mat4 projectionMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 
-out vec3 _colors;
+out vec4 _color;
 
 float function(float x, float y) {
 	return 1.0f - x * x + y * y;
 }
 void main(){
-		_colors = colors;
-		vec4 position =  viewMatrix * modelMatrix * projectionMatrix * vec4(positions.xyz , 1.0f);
-		gl_Position =vec4(position.xy, position.z, position.w);
+		_color = color;
+		gl_Position =  viewMatrix * modelMatrix * projectionMatrix * position;
 
 }
 
-)TEXT"
+)"

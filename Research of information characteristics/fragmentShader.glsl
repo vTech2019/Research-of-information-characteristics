@@ -1,13 +1,13 @@
-R"Text(
+R"(
 
 #version 430 compatibility
 
-in vec3 _colors;
+in vec4 _color;
 
 void main() {
 
 
-	gl_FragColor = vec4(_colors, 1.0f);
+	gl_FragColor = _color;
 }
 
-)Text"
+)"
