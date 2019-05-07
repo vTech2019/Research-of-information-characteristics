@@ -124,6 +124,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,6 +134,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Figures.cpp" />
     <ClCompile Include="Math.cpp" />
     <ClCompile Include="OpenGL_device.cpp" />
     <ClCompile Include="Research of information characteristics.cpp" />
@@ -142,6 +144,7 @@
     <None Include="vertexShader.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Figures.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="OpenGL_device.h" />
   </ItemGroup>

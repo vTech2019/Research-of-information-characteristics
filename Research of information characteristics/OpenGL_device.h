@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #pragma intrinsic(sin, cos)
-
 enum { GL_VECTOR_BUFFER, GL_COLOR_BUFFER, GL_INDEX_BUFFER };
 class OpenGL_device
 {
@@ -29,7 +28,7 @@ class OpenGL_device
 	std::vector<GLint> normal_index;
 
 	float4 Up = { 0.0f, 1.0f, 0.0f, 0.0f };
-	float4 Center = { 0.0f, 0.0f, -1.0f, 0.0f };
+	float4 Center = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float4 Eye = { 0.0f, 0.0f, 1.0f, 0.0f };
 
 	uint32_t mouse_wheel;
@@ -58,6 +57,8 @@ public:
 	size_t pushProgram();
 
 	std::vector<GLuint>::iterator pushBuffer(void* data, size_t number_objects, size_t length_object, size_t typeBuffer);
+
+	void pushDrawObjects(size_t number_objects);
 
 	void setMouseOldPosition(int2 data);
 

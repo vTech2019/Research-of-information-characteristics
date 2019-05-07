@@ -161,7 +161,6 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 {
 	switch (typeBuffer) {
 	case GL_VECTOR_BUFFER:
-		this->number_objects.push_back(number_objects);
 		vector_buffer.resize(vector_buffer.size() + 1);
 		glGenBuffers(1, &vector_buffer.back());
 		glBindBuffer(GL_ARRAY_BUFFER, vector_buffer.back());
@@ -186,6 +185,9 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 		break;
 	}
 	return std::vector<GLuint>::iterator();
+}
+void OpenGL_device::pushDrawObjects(size_t number_objects) {
+		this->number_objects.push_back(number_objects);
 }
 void OpenGL_device::setMouseOldPosition(int2 data) {
 	old_mouse_position = data;
@@ -231,7 +233,7 @@ void OpenGL_device::Render() {
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_INDEX_ARRAY);
+	//glEnableClientState(GL_INDEX_ARRAY);
 	for (size_t i = 0; i < programs.size(); i++) {
 		if (last_program != programs[i])
 			last_program = programs[i],
@@ -249,13 +251,13 @@ void OpenGL_device::Render() {
 			glEnableVertexAttribArray(color_index[i]);
 			glVertexAttribPointer(color_index[i], 4, GL_FLOAT, GL_FALSE, 0, 0);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer[j]);
-			glDrawElements(GL_POINTS, number_objects[j], GL_UNSIGNED_INT, NULL);
+			glDrawElements(GL_TRIANGLE_STRIP, number_objects[j], GL_UNSIGNED_INT, NULL);
 		}
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_INDEX_ARRAY);
+//	glDisableClientState(GL_INDEX_ARRAY);
 }
 OpenGL_device::OpenGL_device(HDC hdc)
 {
@@ -306,9 +308,9 @@ OpenGL_device::OpenGL_device(HDC hdc)
 	glewExperimental = GL_TRUE;
 	glPointSize(3.0f);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+//	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE);
-	glDepthFunc(GL_LESS);
+//	glDepthFunc(GL_LESS);
 	GLint NumberOfExtensions;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &NumberOfExtensions);
 	printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
@@ -353,12 +355,64 @@ void OpenGL_device::rotate(GLfloat angle, float4 vector) {
 }
 void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 
+	//float fx = Center[0] - Eye[0];
+	//float fy = Center[1] - Eye[1];
+	//float fz = Center[2] - Eye[2];
+
+	//float normalizeVector = 1.0f / sqrtf(fx * fx + fy * fy + fz * fz);
+
+	//fx *= normalizeVector;
+	//fy *= normalizeVector;
+	//fz *= normalizeVector;
+
+	//float sx = fy * Up[2] - fz * Up[1];
+	//float sy = fz * Up[0] - fx * Up[2];
+	//float sz = fx * Up[1] - fy * Up[0];
+
+	//normalizeVector = 1.0f / sqrtf(sx * sx + sy * sy + sz * sz);
+
+	//sx *= normalizeVector;
+	//sy *= normalizeVector;
+	//sz *= normalizeVector;
+
+	//if ((0 == sx) && (0 == sy) && (0 == sz))
+	//	return;
+
+	//float ux = sy * fz - sz * fy;
+	//float uy = sz * fx - sx * fz;
+	//float uz = sx * fy - sy * fx;
+
+	//(!modelMatrix)[0]= sx;
+	//(!modelMatrix)[1] = ux;
+	//(!modelMatrix)[2] = -fx;
+	//(!modelMatrix)[3] = 0.0f;
+
+	//(!modelMatrix)[4] = sy;
+	//(!modelMatrix)[5] = uy;
+	//(!modelMatrix)[6] = -fy;
+	//(!modelMatrix)[7] = 0.0f;
+
+	//(!modelMatrix)[8] = sz;
+	//(!modelMatrix)[9] = uz;
+	//(!modelMatrix)[10] = -fz;
+	//(!modelMatrix)[11] = 0.0f;
+
+	//(!modelMatrix)[12] = 0.0f;
+	//(!modelMatrix)[13] = 0.0f;
+	//(!modelMatrix)[14] = 0.0f;
+	//(!modelMatrix)[15] = 1.0f;
+
+	//(!modelMatrix)[12] += (!modelMatrix)[0] * -Eye[0] + (!modelMatrix)[4] * -Eye[1] + (!modelMatrix)[8] * -Eye[2];
+	//(!modelMatrix)[13] += (!modelMatrix)[1] * -Eye[0] + (!modelMatrix)[5] * -Eye[1] + (!modelMatrix)[9] * -Eye[2];
+	//(!modelMatrix)[14] += (!modelMatrix)[2] * -Eye[0] + (!modelMatrix)[6] * -Eye[1] + (!modelMatrix)[10] * -Eye[2];
+	//(!modelMatrix)[15] += (!modelMatrix)[3] * -Eye[0] + (!modelMatrix)[7] * -Eye[1] + (!modelMatrix)[11] * -Eye[2];
+
 	Up = cross_vec3(normalize_vec3(cross_vec3(Up, normalize_vec3(Eye))), normalize_vec3(Eye));
 
-	mat4x4 translation;
-	translation.x.w = -Eye.x;
-	translation.y.w = -Eye.y;
-	translation.z.w = -Eye.z;
+	//mat4x4 translation;
+	//translation.x.w = -Eye.x;
+	//translation.y.w = -Eye.y;
+	//translation.z.w = -Eye.z;
 	float4 z = normalize_vec3(Eye - Center);
 	float4 x = normalize_vec3(cross_vec3(normalize_vec3(Up), z));
 	float4 y = normalize_vec3(cross_vec3(z, x));
@@ -366,9 +420,11 @@ void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 	modelMatrix.y = { x.y, y.y, z.y, 0.0f };
 	modelMatrix.z = { x.z, y.z, z.z, 0.0f };
 	modelMatrix.w = { 0.0f, 0.0f, 0.0f, 1.0f };
-	modelMatrix.x.w = -x.x * Eye.x - y.x * Eye.y - z.x * Eye.z;
-	modelMatrix.y.w = -x.y * Eye.x - y.y * Eye.y - z.y * Eye.z;
-	modelMatrix.z.w = -x.z * Eye.x - y.z * Eye.y - z.z * Eye.z;
+	modelMatrix.x.w += -x.x * Eye.x - y.x * Eye.y - z.x * Eye.z;
+	modelMatrix.y.w += -x.y * Eye.x - y.y * Eye.y - z.y * Eye.z;
+	modelMatrix.z.w += -x.z * Eye.x - y.z * Eye.y - z.z * Eye.z;
+//	modelMatrix.w.w += -x.w * Eye.x - y.w * Eye.y - z.w * Eye.z;
+	//modelMatrix.print();
 	//modelMatrix = modelMatrix * translation;
 }
 void OpenGL_device::genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV) {

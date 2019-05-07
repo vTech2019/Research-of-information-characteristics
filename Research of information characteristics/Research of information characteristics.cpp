@@ -1,5 +1,5 @@
 ﻿#include <time.h>
-
+#include "Figures.h"
 #include "Math.h"
 #include "OpenGL_device.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -97,48 +97,7 @@ int main()
 	}
 	return msg.wParam;
 }
-GLfloat function(float x, float y) {
-	return x * x + y * y;
-}
-float4* genPositions(size_t width, size_t height, GLfloat& max, GLfloat& min, GLfloat far_draw_x, GLfloat near_draw_x, GLfloat far_draw_y, GLfloat near_draw_y) {
-	float4* position = (float4*)malloc(width * height * sizeof(float4));
-	ptrdiff_t start_h = -ptrdiff_t(height) / 2;
-	ptrdiff_t start_w = -ptrdiff_t(width) / 2;
-	GLfloat step_x = (far_draw_x - near_draw_x) / width;
-	GLfloat step_y = (far_draw_y - near_draw_y) / height;
 
-	for (ptrdiff_t y = start_h, _y = 0; _y < height; y++, _y++) {
-		for (ptrdiff_t x = start_w, _x = 0; _x < width; x++, _x++) {
-			GLfloat f_x = x * step_x;
-			GLfloat f_y = y * step_y;
-			GLfloat f_z = function(x, y);
-			max = max < f_z ? f_z : max;
-			min = min < f_z ? min : f_z;
-			position[_y * width + _x] = float4(f_x, f_y, f_z - 1.0f, 1.0f);
-		}
-	}
-	return position;
-}
-float4* genColors(float4* positions, GLfloat max, GLfloat min, size_t length) {
-	float4* color = (float4*)malloc(length * sizeof(float4));
-	GLfloat step = 1.0f / (2 * (max - min));
-	GLfloat radius = 1.0f;
-	GLfloat normalize = (2.0f * 3.1416f * radius) / max;
-	for (GLint i = 0; i < length; i++) {
-		GLfloat position = (-min + positions[i].z) * step;
-		position = position < 0.0f ? 0.0f : position;
-		positions[i].z = position;
-		color[i] = { position, position, position, 1.0f };
-	}
-	return color;
-}
-GLuint* genIndices(size_t width, size_t height) {
-	GLuint* index = (GLuint*)malloc((width * height) * sizeof(GLuint));
-	for (size_t i = 0; i < width * height; i++) {
-		index[i] = i;
-	}
-	return index;
-}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -157,19 +116,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		monitor_width = info.rcMonitor.right - info.rcMonitor.left;
 		monitor_height = info.rcMonitor.bottom - info.rcMonitor.top;
 
-		break;
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
 	case WM_COMMAND:
 		switch (wParam) {
 		case ID_BUTTON_1: {
 			GLfloat max = -999999, min = MAXDWORD32;
-			size_t number_objects = 1024 * 1024;
-			float4* positions = genPositions(1024, 1024, max, min, -1.0f, 1.0f, -1.0f, 1.0f);
-			float4* colors = genColors(positions, max, min, number_objects);
-			GLuint* indices = genIndices(1024, 1024);
-			data->pushBuffer(positions, number_objects, sizeof(float4), GL_VECTOR_BUFFER);
-			data->pushBuffer(colors, number_objects, sizeof(float4), GL_COLOR_BUFFER);
-			data->pushBuffer(indices, number_objects, sizeof(GLuint), GL_INDEX_BUFFER);
+			size_t width = 30;
+			size_t height = 40;
+			size_t number_objects = width * height - 2;
+			size_t number_points = width * height;
+			size_t number_indeces = (width) * (height)+(width - 2) * (height - 2);
+			float4 * positions = genPositions(width, height, max, min, 1.0f, -1.0f, 1.0f, -1.0f);
+			float4 * colors = genColors(positions, max, min, number_points);
+			GLuint * indices = genIndices(width, height);
+			data->pushDrawObjects(number_indeces);
+			data->pushBuffer(positions, number_points, sizeof(float4), GL_VECTOR_BUFFER);
+			data->pushBuffer(colors, number_points, sizeof(float4), GL_COLOR_BUFFER);
+			data->pushBuffer(indices, number_indeces, sizeof(GLuint), GL_INDEX_BUFFER);
 			free(colors);
 			free(positions);
 			free(indices);
@@ -202,6 +166,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 			case RIM_TYPEMOUSE:
 			{
+				//switch (raw->data.mouse.ulButtons) {
+				//case RI_MOUSE_LEFT_BUTTON_UP:
 				data->new_mouse_position.x = data->old_mouse_position.x + raw->data.mouse.lLastX;
 				data->new_mouse_position.y = data->old_mouse_position.y + raw->data.mouse.lLastY;
 				FLOAT sensitivity = 1;
@@ -225,7 +191,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				data->getCenterView()->z = cos(M_PI * data->x_angle / 180.0f) * sin(M_PI * data->y_angle / 180.0f);
 				*data->getCenterView() = normalize_vec3(*data->getCenterView());
 				data->cameraRotate();
-
+				//	break;
+				//}
 				break;
 			}
 			case RIM_TYPEKEYBOARD:

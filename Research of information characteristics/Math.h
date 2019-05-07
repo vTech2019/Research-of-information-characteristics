@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #define GLEW_STATIC
@@ -13,13 +14,15 @@
 #pragma comment(lib, "opengl32.lib")
 #endif
 
-
 struct GLubyte4 {
 	uint8_t r, g, b, a;
 };
 
 struct uint2 {
 	uint32_t x, y;
+	void operator ()(uint32_t x, uint32_t y) {
+		this->x = x, this->y = y;
+	}
 	void operator =(uint2 data) {
 		x = data.x, y = data.y;
 	}
@@ -63,6 +66,19 @@ struct float4 {
 	float4(GLfloat _x, GLfloat _y, GLfloat _z, GLfloat _w) {
 		x = _x; y = _y; z = _z; w = _w;
 	}
+	GLfloat	operator [](size_t i) {
+		switch (i) {
+		case 0:
+			return x;
+		case 1:
+			return y;
+		case 2:
+			return z;
+		case 3:
+			return w;
+		}
+		return NULL;
+	}
 	GLfloat	operator +() {
 		return x + y + z + w;
 	}
@@ -70,7 +86,7 @@ struct float4 {
 		return float4{ x + data.x, y + data.y, z + data.z,w + data.w };
 	}
 	float4 operator *(GLfloat data) {
-		return float4( x * data, y * data, z * data,w * data );
+		return float4(x * data, y * data, z * data, w * data);
 	}
 	float4 operator *(float4 data) {
 		return float4{ x * data.x, y * data.y, z * data.z,w * data.w };
@@ -124,6 +140,36 @@ struct mat4x4 {
 	}
 	mat4x4 operator =(mat4x4 data) {
 		return mat4x4(x = data.x, y = data.y, z = data.z, w = data.w);
+	}
+	GLfloat* operator!() {
+		return &x.x;
+	}
+	GLfloat	operator [](size_t i) {
+		switch (i) {
+		case 0:return x.x;
+		case 1:	return x.y;
+		case 2:	return x.z;
+		case 3:	return x.w;
+		case 4:return y.x;
+		case 5:	return y.y;
+		case 6:return y.z;
+		case 7:return y.w;
+		case 8:return z.x;
+		case 9:return z.y;
+		case 10:return z.z;
+		case 11:return z.w;
+		case 12:return w.x;
+		case 13:return w.y;
+		case 14:return w.z;
+		case 15:return w.w;
+		}
+		return NULL;
+	}
+	void print() {
+		printf("%f %f %f %f\n", x.x, x.y, x.z, x.w);
+		printf("%f %f %f %f\n", y.x, y.y, y.z, y.w);
+		printf("%f %f %f %f\n", z.x, z.y, z.z, z.w);
+		printf("%f %f %f %f\n", w.x, w.y, w.z, w.w);
 	}
 };
 float4 cross_vec3(float4 matrix_1, float4 matrix_2);
