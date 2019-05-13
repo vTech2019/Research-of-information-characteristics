@@ -39,10 +39,10 @@ float4* genColors(float4* positions, GLfloat max, GLfloat min, size_t length) {
 	return color;
 }
 GLuint* genIndices(uint32_t width, uint32_t height) {
-	int length = (width) * (height)+(width - 2) * (height - 2);
+	size_t length = (width) * (height)+(width - 2) * (height - 2);
 	GLuint * index = (GLuint*)malloc(length * sizeof(GLuint));
-	int offset = 0;
-	int _y = 0, _x = 0;
+	size_t offset = 0;
+	ptrdiff_t _y = 0, _x = 0;
 	for (uint32_t i = 0; i < height - 1; i++)
 	{
 		if (i % 2 == 0)
@@ -81,13 +81,15 @@ GLuint* genIndices(uint32_t width, uint32_t height) {
 }
 
 
-float4* makeSkyBox(float4 position, GLfloat sizeQuad) {
-	//float4* position = (float4*)malloc(9 * 4 * sizeof(float4));
-	//float4* ptr_position = position;
-	//GLfloat start_h = -GLfloat(height) / 2;
-	//GLfloat start_w = -GLfloat(width) / 2;
-	//GLfloat end_h = GLfloat(height) / 2;
-	//GLfloat end_w = GLfloat(width) / 2;
-
-
-}
+//float4* makeBox(float4 position, GLfloat sizeQuad) {
+//	//float4* position = (float4*)malloc(9 * 4 * sizeof(float4));
+//	//float4* ptr_position = position;
+//	GLfloat start_h = -GLfloat(sizeQuad) / 2;
+//	GLfloat start_w = -GLfloat(sizeQuad) / 2;
+//	GLfloat start_z = -GLfloat(sizeQuad) / 2;
+//	GLfloat end_h = GLfloat(sizeQuad) / 2;
+//	GLfloat end_w = GLfloat(sizeQuad) / 2;
+//	GLfloat end_z = GLfloat(sizeQuad) / 2;
+//	GLfloat step = sizeQuad;
+//
+//}

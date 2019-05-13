@@ -16,7 +16,6 @@ float function(float x, float y) {
 void main(){
 		_color = color;
 		gl_Position =  viewMatrix * modelMatrix * projectionMatrix * position;
-
 }
 
 )"

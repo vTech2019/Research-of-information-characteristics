@@ -98,11 +98,34 @@ struct float4 {
 		x = data.x; y = data.y; z = data.z; w = data.w;
 		return data;
 	}
+	bool operator ==(float4 data){
+		if (data.x == x && data.y == y && data.z == z && data.w == w)
+			return true;
+		else
+			return false;
+	}
+	void print() {
+		printf("%f %f %f %f\n", x, y, z, w);
+	}
 };
-
+struct float16 {
+	GLfloat v_0, v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12, v_13, v_14, v_15;
+	float16(float4 x, float4 y, float4 z, float4 w) {
+		v_0 = x.x; v_1 = x.y; v_2 = x.z; v_3 = x.w; 
+		v_4 = y.x; v_5 = y.y; v_6 = y.z; v_7 = y.w;
+		v_8 = z.x; v_9 = z.y; v_10 = z.z; v_11 = z.w;
+		v_12 = w.x; v_13 = w.y; v_14 = w.z; v_15 = w.w;
+	}
+};
 struct mat4x4 {
 	float4 x, y, z, w;
 	mat4x4() {
+		x = { 1.0f, 0.0f, 0.0f, 0.0f };
+		y = { 0.0f,1.0f,0.0f,0.0f };
+		z = { 0.0f,0.0f,1.0f,0.0f };
+		w = { 0.0f,0.0f,0.0f,1.0f };
+	}
+	void identity() {
 		x = { 1.0f, 0.0f, 0.0f, 0.0f };
 		y = { 0.0f,1.0f,0.0f,0.0f };
 		z = { 0.0f,0.0f,1.0f,0.0f };
@@ -140,6 +163,13 @@ struct mat4x4 {
 	}
 	mat4x4 operator =(mat4x4 data) {
 		return mat4x4(x = data.x, y = data.y, z = data.z, w = data.w);
+	}
+	void transpose() {
+		const float16 const tmp(x,y,z,w);
+		x = { tmp.v_0, tmp.v_4, tmp.v_8, tmp.v_12 };
+		y = { tmp.v_1, tmp.v_5, tmp.v_9, tmp.v_13 };
+		z = { tmp.v_2, tmp.v_6, tmp.v_10, tmp.v_14 };
+		w = { tmp.v_3, tmp.v_7, tmp.v_11, tmp.v_15 };
 	}
 	GLfloat* operator!() {
 		return &x.x;

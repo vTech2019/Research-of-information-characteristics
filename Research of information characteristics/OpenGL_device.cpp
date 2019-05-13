@@ -218,7 +218,7 @@ float4* OpenGL_device::getEyeView() {
 
 void OpenGL_device::cameraRotate()
 {
-	lookAt(Eye, Up, Eye + Center);
+	lookAt(Eye, Up, Center);
 }
 //GLfloat t_1 = 0.0f;
 //GLfloat t_2 = 0.0f;
@@ -261,7 +261,7 @@ void OpenGL_device::Render() {
 }
 OpenGL_device::OpenGL_device(HDC hdc)
 {
-
+	projectionMatrix.identity();
 	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR),
 		1,
@@ -284,24 +284,24 @@ OpenGL_device::OpenGL_device(HDC hdc)
 	int nPixelFormat = ChoosePixelFormat(hdc, &pfd);
 
 	if (nPixelFormat == 0) {
-		MessageBox(NULL, std::to_string(GetLastError()).c_str(), "ChoosePixelFormat error ", MB_OK);
+		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"ChoosePixelFormat error ", MB_OK);
 		return;
 	}
 	if (!SetPixelFormat(hdc, nPixelFormat, &pfd)) {
-		MessageBox(NULL, std::to_string(GetLastError()).c_str(), "SetPixelFormat error ", MB_OK);
+		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"SetPixelFormat error ", MB_OK);
 		return;
 	}
 	if (!(gl_context = wglCreateContext(hdc))) {
-		MessageBox(NULL, std::to_string(GetLastError()).c_str(), "Creating temporary render context fail ", MB_OK);
+		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"Creating temporary render context fail ", MB_OK);
 		return;
 	}
 	if (!wglMakeCurrent(hdc, gl_context)) {
-		MessageBox(NULL, "Error", "Error wglMakeCurrent!", MB_OK);
+		MessageBox(NULL, L"Error", L"Error wglMakeCurrent!", MB_OK);
 		wglDeleteContext(gl_context);
 		return;
 	}
 	if (glewInit() != GLEW_OK) {
-		MessageBox(NULL, "Error", "Error init glew!", MB_OK);
+		MessageBox(NULL, L"Error", L"Error init glew!", MB_OK);
 		wglDeleteContext(gl_context);
 		return;
 	}
@@ -354,7 +354,8 @@ void OpenGL_device::rotate(GLfloat angle, float4 vector) {
 	viewMatrix.z = Result.x * Rotate_z.x + Result.y * Rotate_z.y + Result.z * Rotate_z.z;
 }
 void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
-
+	if (Center == Eye)
+		return;
 	//float fx = Center[0] - Eye[0];
 	//float fy = Center[1] - Eye[1];
 	//float fz = Center[2] - Eye[2];
@@ -423,14 +424,16 @@ void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 	modelMatrix.x.w += -x.x * Eye.x - y.x * Eye.y - z.x * Eye.z;
 	modelMatrix.y.w += -x.y * Eye.x - y.y * Eye.y - z.y * Eye.z;
 	modelMatrix.z.w += -x.z * Eye.x - y.z * Eye.y - z.z * Eye.z;
-//	modelMatrix.w.w += -x.w * Eye.x - y.w * Eye.y - z.w * Eye.z;
+	modelMatrix.w.w += -x.w * Eye.x - y.w * Eye.y - z.w * Eye.z;
+	//modelMatrix.transpose();
 	//modelMatrix.print();
 	//modelMatrix = modelMatrix * translation;
 }
 void OpenGL_device::genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV) {
+	GLfloat angle = GLfloat((FOV / 180.0f) * M_PI);
 	GLfloat aspect = width / height;
 	GLfloat depth = z_far - z_near;
-	GLfloat tanFOV = tanf(FOV * 0.5f);
+	GLfloat tanFOV = tanf(angle * 0.5f);
 	projectionMatrix.x.x = 1.0f / (aspect * tanFOV);
 	projectionMatrix.y.y = 1.0f / tanFOV;
 	projectionMatrix.z.z = -(z_far + z_near) / depth;

@@ -48,10 +48,10 @@ int main()
 	wc.lpfnWndProc = WndProc;
 	wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 	wc.hCursor = (HCURSOR)LoadCursor(Instance, IDC_ARROW);
-	wc.lpszClassName = "MainWindow";
+	wc.lpszClassName = L"MainWindow";
 	if (!RegisterClass(&wc))
-		MessageBox(NULL, "Failed to register window", "Error!", MB_OK);
-	hwnd = CreateWindow("MainWindow", "OpenGL", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, NULL, CW_USEDEFAULT, NULL, (HWND)NULL, NULL, HINSTANCE(Instance), NULL);
+		MessageBox(NULL, L"Failed to register window", L"Error!", MB_OK);
+	hwnd = CreateWindow(L"MainWindow", L"OpenGL", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, NULL, CW_USEDEFAULT, NULL, (HWND)NULL, NULL, HINSTANCE(Instance), NULL);
 
 	RAWINPUTDEVICE Rid;
 	Rid.usUsagePage = GENERIC;
@@ -60,17 +60,17 @@ int main()
 	Rid.hwndTarget = hwnd;
 
 	if (!RegisterRawInputDevices(&Rid, 1, sizeof(Rid))) {
-		MessageBox(NULL, "Raw devices registration failed!", "Error!", MB_OK);
+		MessageBox(NULL, L"Raw devices registration failed!", L"Error!", MB_OK);
 	}
 	Rid.usUsage = Keyboard;
 	if (!RegisterRawInputDevices(&Rid, 1, sizeof(Rid))) {
-		MessageBox(NULL, "Raw devices registration failed!", "Error!", MB_OK);
+		MessageBox(NULL, L"Raw devices registration failed!", L"Error!", MB_OK);
 	}
 	HMENU hMenu = CreateMenu();
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_1, "DrawFunction");
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_2, "DrawHistogram");
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_3, "&Edit");
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_4, "&Help");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_1, L"Отрисовка функции");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_2, L"DrawHistogram");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_3, L"&Edit");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_4, L"&Help");
 	SetMenu(hwnd, hMenu);
 
 	OpenGL_device device(GetDC(hwnd));
@@ -166,8 +166,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 			case RIM_TYPEMOUSE:
 			{
-				//switch (raw->data.mouse.ulButtons) {
-				//case RI_MOUSE_LEFT_BUTTON_UP:
 				data->new_mouse_position.x = data->old_mouse_position.x + raw->data.mouse.lLastX;
 				data->new_mouse_position.y = data->old_mouse_position.y + raw->data.mouse.lLastY;
 				FLOAT sensitivity = 1;
@@ -191,8 +189,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				data->getCenterView()->z = cos(M_PI * data->x_angle / 180.0f) * sin(M_PI * data->y_angle / 180.0f);
 				*data->getCenterView() = normalize_vec3(*data->getCenterView());
 				data->cameraRotate();
-				//	break;
-				//}
 				break;
 			}
 			case RIM_TYPEKEYBOARD:
@@ -201,6 +197,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				switch (raw->data.keyboard.VKey) {
 				case VK_LEFT:
 					*data->getEyeView() = *data->getEyeView() + (normalize_vec3(cross_vec3(*data->getCenterView(), *data->getUpView())) * cameraSpeed);
+					data->getEyeView()->print();
 					data->cameraRotate();
 					break;
 				case VK_RIGHT: {
