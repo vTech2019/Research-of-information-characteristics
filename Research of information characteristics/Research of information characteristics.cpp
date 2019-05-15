@@ -1,9 +1,11 @@
 ﻿#include <time.h>
 #include "Figures.h"
 #include "Math.h"
+#include "LoadImage.h"
 #include "OpenGL_device.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+std::vector<dataImage> images;
 const char codeVertexShader[] =
 #include "vertexShader.glsl"
 ;
@@ -68,8 +70,8 @@ int main()
 	}
 	HMENU hMenu = CreateMenu();
 	AppendMenu(hMenu, MF_STRING, ID_BUTTON_1, L"Отрисовка функции");
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_2, L"DrawHistogram");
-	AppendMenu(hMenu, MF_STRING, ID_BUTTON_3, L"&Edit");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_2, L"Чтение изображений");
+	AppendMenu(hMenu, MF_STRING, ID_BUTTON_3, L"Запись изображений");
 	AppendMenu(hMenu, MF_STRING, ID_BUTTON_4, L"&Help");
 	SetMenu(hwnd, hMenu);
 
@@ -98,7 +100,6 @@ int main()
 	return msg.wParam;
 }
 
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	static FLOAT monitor_width;
@@ -122,8 +123,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		switch (wParam) {
 		case ID_BUTTON_1: {
 			GLfloat max = -999999, min = MAXDWORD32;
-			size_t width = 30;
-			size_t height = 40;
+			size_t width = 3;
+			size_t height = 4;
 			size_t number_objects = width * height - 2;
 			size_t number_points = width * height;
 			size_t number_indeces = (width) * (height)+(width - 2) * (height - 2);
@@ -131,15 +132,49 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			float4 * colors = genColors(positions, max, min, number_points);
 			GLuint * indices = genIndices(width, height);
 			data->pushDrawObjects(number_indeces);
-			data->pushBuffer(positions, number_points, sizeof(float4), GL_VECTOR_BUFFER);
-			data->pushBuffer(colors, number_points, sizeof(float4), GL_COLOR_BUFFER);
-			data->pushBuffer(indices, number_indeces, sizeof(GLuint), GL_INDEX_BUFFER);
+			data->pushBuffer(positions, number_points, sizeof(float4), _GL_VECTOR_BUFFER_);
+			data->pushBuffer(colors, number_points, sizeof(float4), _GL_COLOR_BUFFER_);
+			data->pushBuffer(indices, number_indeces, sizeof(GLuint), _GL_INDEX_BUFFER_);
 			free(colors);
 			free(positions);
 			free(indices);
 			return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		}
 		case ID_BUTTON_2: {
+			OPENFILENAME ofn = { 0 };
+			WCHAR fileName[MAX_PATH] = { 0 };
+			ofn.lStructSize = sizeof(OPENFILENAME);
+			ofn.hwndOwner = NULL;
+			ofn.lpstrFile = fileName;
+			ofn.nMaxFile = sizeof(fileName);
+			ofn.lpstrFilter = L"JPG\0*.jpg\0PNG\0*.png\0BMP\0*.bmp";
+			ofn.nFilterIndex = 3;
+			ofn.lpstrInitialDir = L"c:\\";
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+			if (GetOpenFileName(&ofn)) {
+				std::vector<std::vector<TCHAR>> names;
+				std::vector<TCHAR> tmp;
+				for (size_t i = ofn.nFileOffset; true; i++) {
+					tmp.push_back(ofn.lpstrFile[i]);
+					if (ofn.lpstrFile[i] == 0) {
+						names.push_back(tmp);
+						tmp.clear();
+						if (ofn.lpstrFile[i + 1] == 0)
+							break;
+					}
+				}
+				if (!ofn.nFileExtension)
+					images = load_images(ofn.lpstrFile, names, true);
+				else{
+					images.push_back( load_image(ofn.lpstrFile, true));
+				}
+				size_t width = 3;
+				size_t height = 4;
+				size_t length_array;
+				float2* texture_coord = genTexture(0.0f, 0.0f, 1.0f, 1.0f, width, height, 1.0f, -1.0f, 1.0f, -1.0f, length_array);
+				data->pushBuffer(texture_coord, length_array, sizeof(float2), _GL_TEXTURE_BUFFER_);
+				data->push2DTexture((GLubyte3*)images[0].get_data(), images[0].get_width(), images[0].get_height());
+			}
 			return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		}
 		}

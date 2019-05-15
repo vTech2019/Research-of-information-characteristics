@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #pragma intrinsic(sin, cos)
-enum { GL_VECTOR_BUFFER, GL_COLOR_BUFFER, GL_INDEX_BUFFER };
+enum { _GL_VECTOR_BUFFER_, _GL_COLOR_BUFFER_, _GL_INDEX_BUFFER_, _GL_TEXTURE_BUFFER_ };
 class OpenGL_device
 {
 	mat4x4 projectionMatrix;
@@ -26,7 +26,7 @@ class OpenGL_device
 	std::vector<GLint> vertex_index;
 	std::vector<GLint> color_index;
 	std::vector<GLint> normal_index;
-
+	std::vector<GLint> texture_index;
 	float4 Up = { 0.0f, 1.0f, 0.0f, 0.0f };
 	float4 Center = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float4 Eye = { 0.0f, 0.0f, 1.0f, 0.0f };
@@ -45,14 +45,15 @@ public:
 	std::vector<GLuint> vector_buffer;
 	std::vector<GLuint> color_buffer;
 	std::vector<GLuint> index_buffer;
-	std::vector<uint2> textures;
+	std::vector<GLuint> texture_buffer;
+	std::vector<uint2> texture_id;
 
 	void rotate(GLfloat angle, float4 vector);
 	void lookAt(float4 Eye, float4 Up, float4 Center);
 	void genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV);
 	void checkErrorShader(GLuint shader, const GLchar* text, GLuint status);
 	void programInfoLog(GLuint shader);
-	size_t push2DTexture(GLubyte4* image, GLuint width, GLuint height);
+	size_t push2DTexture(GLubyte3* image, GLuint width, GLuint height);
 	bool pushShader(GLuint typeShader, GLchar* code, size_t length);
 	size_t pushProgram();
 

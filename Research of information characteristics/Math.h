@@ -18,6 +18,9 @@ struct GLubyte4 {
 	uint8_t r, g, b, a;
 };
 
+struct GLubyte3 {
+	uint8_t r, g, b;
+};
 struct uint2 {
 	uint32_t x, y;
 	void operator ()(uint32_t x, uint32_t y) {

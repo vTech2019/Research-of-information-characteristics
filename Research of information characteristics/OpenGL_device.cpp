@@ -42,19 +42,19 @@ void OpenGL_device::programInfoLog(GLuint shader)
 	}
 }
 
-size_t OpenGL_device::push2DTexture(GLubyte4 * image, GLuint width, GLuint height) {
-	textures.resize(textures.size() + 1);
-	glGenTextures(1, &textures.back().x);
-	textures.back().y = GL_TEXTURE_2D;
-	glBindTexture(GL_TEXTURE_2D, textures.back().x);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+size_t OpenGL_device::push2DTexture(GLubyte3 * image, GLuint width, GLuint height) {
+	texture_id.resize(texture_id.size() + 1);
+	glGenTextures(1, &texture_id.back().x);
+	texture_id.back().y = GL_TEXTURE_2D;
+	glBindTexture(GL_TEXTURE_2D, texture_id.back().x);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	return (size_t)& textures.back();
+	return (size_t)& texture_id.back();
 }
 
 bool OpenGL_device::pushShader(GLuint typeShader, GLchar * code, size_t length)
@@ -151,6 +151,7 @@ size_t OpenGL_device::pushProgram()
 	}
 	vertex_index.push_back(glGetAttribLocation(programs.back(), "position"));
 	color_index.push_back(glGetAttribLocation(programs.back(), "color"));
+	texture_index.push_back(glGetAttribLocation(programs.back(), "texture"));
 	projection_matrix_index.push_back(glGetUniformLocation(programs.back(), "projectionMatrix"));
 	model_matrix_index.push_back(glGetUniformLocation(programs.back(), "modelMatrix"));
 	view_matrix_index.push_back(glGetUniformLocation(programs.back(), "viewMatrix"));
@@ -160,14 +161,14 @@ size_t OpenGL_device::pushProgram()
 std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t number_objects, size_t length_object, size_t typeBuffer)
 {
 	switch (typeBuffer) {
-	case GL_VECTOR_BUFFER:
+	case _GL_VECTOR_BUFFER_:
 		vector_buffer.resize(vector_buffer.size() + 1);
 		glGenBuffers(1, &vector_buffer.back());
 		glBindBuffer(GL_ARRAY_BUFFER, vector_buffer.back());
 		glBufferData(GL_ARRAY_BUFFER, number_objects * length_object, data, GL_STATIC_DRAW);
 		return vector_buffer.begin() + vector_buffer.size() - 1;
 		break;
-	case GL_COLOR_BUFFER:
+	case _GL_COLOR_BUFFER_:
 
 		color_buffer.resize(color_buffer.size() + 1);
 		glGenBuffers(1, &color_buffer.back());
@@ -175,7 +176,7 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 		glBufferData(GL_ARRAY_BUFFER, number_objects * length_object, data, GL_STATIC_DRAW);
 		return color_buffer.begin() + color_buffer.size() - 1;
 		break;
-	case GL_INDEX_BUFFER:
+	case _GL_INDEX_BUFFER_:
 
 		index_buffer.resize(index_buffer.size() + 1);
 		glGenBuffers(1, &index_buffer.back());
@@ -183,9 +184,20 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, number_objects * length_object, data, GL_STATIC_DRAW);
 		return index_buffer.begin() + index_buffer.size() - 1;
 		break;
+	case _GL_TEXTURE_BUFFER_:
+
+		texture_buffer.resize(texture_buffer.size() + 1);
+		glGenBuffers(1, &texture_buffer.back());
+		glBindBuffer(GL_ARRAY_BUFFER, texture_buffer.back());
+		glBufferData(GL_ARRAY_BUFFER, number_objects * length_object, data, GL_STATIC_DRAW);
+
+		//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		//glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, texture_buffer.back());
+		break;
 	}
 	return std::vector<GLuint>::iterator();
 }
+
 void OpenGL_device::pushDrawObjects(size_t number_objects) {
 		this->number_objects.push_back(number_objects);
 }
@@ -242,7 +254,8 @@ void OpenGL_device::Render() {
 		glUniformMatrix4fv(projection_matrix_index[i], 1, GL_FALSE, (GLfloat*)& projectionMatrix);
 		glUniformMatrix4fv(view_matrix_index[i], 1, GL_FALSE, (GLfloat*)& viewMatrix);
 		glUniformMatrix4fv(model_matrix_index[i], 1, GL_FALSE, (GLfloat*)& modelMatrix);
-
+		if (texture_id.size() > 0)
+			glBindTexture(texture_id[0].y, texture_id[0].x);
 		for (size_t j = 0; j < vector_buffer.size(); j++) {
 			glBindBuffer(GL_ARRAY_BUFFER, vector_buffer[j]);
 			glEnableVertexAttribArray(vertex_index[i]);
@@ -250,7 +263,9 @@ void OpenGL_device::Render() {
 			glBindBuffer(GL_ARRAY_BUFFER, color_buffer[j]);
 			glEnableVertexAttribArray(color_index[i]);
 			glVertexAttribPointer(color_index[i], 4, GL_FLOAT, GL_FALSE, 0, 0);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer[j]);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer[j]); 
+			glEnableVertexAttribArray(texture_index[i]);
+			glVertexAttribPointer(texture_index[i], 2, GL_FLOAT, GL_FALSE, 0, 0);
 			glDrawElements(GL_TRIANGLE_STRIP, number_objects[j], GL_UNSIGNED_INT, NULL);
 		}
 	}
@@ -261,7 +276,6 @@ void OpenGL_device::Render() {
 }
 OpenGL_device::OpenGL_device(HDC hdc)
 {
-	projectionMatrix.identity();
 	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR),
 		1,
@@ -290,7 +304,10 @@ OpenGL_device::OpenGL_device(HDC hdc)
 	if (!SetPixelFormat(hdc, nPixelFormat, &pfd)) {
 		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"SetPixelFormat error ", MB_OK);
 		return;
-	}
+	}	
+	//if (int iPixelFormat = GetPixelFormat(hdc)) {
+	//	DescribePixelFormat(hdc, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+	//}
 	if (!(gl_context = wglCreateContext(hdc))) {
 		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"Creating temporary render context fail ", MB_OK);
 		return;
@@ -313,7 +330,9 @@ OpenGL_device::OpenGL_device(HDC hdc)
 //	glDepthFunc(GL_LESS);
 	GLint NumberOfExtensions;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &NumberOfExtensions);
-	printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
+	const GLubyte* gl_version = glGetString(GL_VERSION);
+	
+	printf("OpenGL version supported by this platform (%s): \n", gl_version);
 	for (GLint i = 0; i < NumberOfExtensions; i++) {
 		const GLubyte* information = glGetStringi(GL_EXTENSIONS, i);
 		printf("%s\n", information);

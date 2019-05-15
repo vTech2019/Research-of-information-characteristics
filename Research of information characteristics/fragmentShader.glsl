@@ -3,11 +3,12 @@ R"(
 #version 430 compatibility
 
 in vec4 _color;
+in vec2 _texture_coord;
+uniform sampler2D texture;
 
 void main() {
 
-
-	gl_FragColor = _color;
+	gl_FragColor =  texture2D(texture, _texture_coord);
 }
 
 )"
