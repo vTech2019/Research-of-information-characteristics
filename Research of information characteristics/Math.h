@@ -61,6 +61,22 @@ struct float2 {
 	}
 };
 
+struct float3 {
+	GLfloat x, y,z;
+
+	float3() {
+		x = 0.0f; y = 0.0f; z = 0.0f;
+	}
+	float3(GLfloat _x, GLfloat _y, GLfloat _z) {
+		x = _x; y = _y; z = _z;
+	}
+	GLfloat	operator +() {
+		return x + y + z;
+	}
+	float3 operator +(float3 data) {
+		return float3( x + data.x, y + data.y, z + data.z );
+	}
+};
 struct float4 {
 	GLfloat x, y, z, w;
 	float4() {

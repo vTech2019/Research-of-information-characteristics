@@ -19,7 +19,7 @@ class OpenGL_device
 	std::vector<GLuint> computeShaders;
 
 	std::vector<GLuint> indicesShaders;
-
+	
 	std::vector<GLint> projection_matrix_index;
 	std::vector<GLint> model_matrix_index;
 	std::vector<GLint> view_matrix_index;
@@ -28,7 +28,7 @@ class OpenGL_device
 	std::vector<GLint> normal_index;
 	std::vector<GLint> texture_index;
 	float4 Up = { 0.0f, 1.0f, 0.0f, 0.0f };
-	float4 Center = { 0.0f, 0.0f, 0.0f, 0.0f };
+	float4 Front = { 0.0f, 0.0f, -1.0f, 0.0f };
 	float4 Eye = { 0.0f, 0.0f, 1.0f, 0.0f };
 
 	uint32_t mouse_wheel;
@@ -39,8 +39,8 @@ public:
 	int2 old_mouse_position;
 	GLfloat y_angle = -90.0f;
 	GLfloat x_angle = 0.0f;
-	GLulong delta_time = 0;
-	GLulong last_frame = 0;
+	size_t delta_time = 0;
+	size_t last_frame = 0;
 	std::vector<size_t> number_objects;
 	std::vector<GLuint> vector_buffer;
 	std::vector<GLuint> color_buffer;
@@ -53,7 +53,7 @@ public:
 	void genProjection(GLfloat width, GLfloat height, GLfloat z_near, GLfloat z_far, GLfloat FOV);
 	void checkErrorShader(GLuint shader, const GLchar* text, GLuint status);
 	void programInfoLog(GLuint shader);
-	size_t push2DTexture(GLubyte3* image, GLuint width, GLuint height);
+	size_t push2DTexture(GLubyte4* image, GLuint width, GLuint height);
 	bool pushShader(GLuint typeShader, GLchar* code, size_t length);
 	size_t pushProgram();
 
@@ -71,7 +71,7 @@ public:
 
 	float4* getUpView();
 
-	float4* getCenterView();
+	float4* getFrontView();
 
 	float4* getEyeView();
 	void cameraRotate();

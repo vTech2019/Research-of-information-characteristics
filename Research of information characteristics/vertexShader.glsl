@@ -1,15 +1,15 @@
 R"(
 #version 430 core
 
-in vec4 position;
-in vec4 color;
+in vec3 position;
+in vec3 color;
 in vec2 texture;
 
 uniform mat4 projectionMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 
-out vec4 _color;
+out vec3 _color;
 out vec2 _texture_coord;
 
 float function(float x, float y) {
@@ -18,7 +18,7 @@ float function(float x, float y) {
 void main(){
 		_texture_coord = texture;
 		_color = color;
-		gl_Position =  viewMatrix * modelMatrix * projectionMatrix * position;
+		gl_Position =  viewMatrix * modelMatrix * projectionMatrix * vec4(position, 1.0f);
 }
 
 )"

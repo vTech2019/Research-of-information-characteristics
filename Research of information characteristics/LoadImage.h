@@ -62,9 +62,16 @@ public:
 	dataImage() {
 		memset(this, 0, sizeof(*this));
 	}
+
+	dataImage(dataImage&& x) {
+		memcpy(this, &x, sizeof(*this));
+		x.data = NULL;
+	}
 	~dataImage() {
-		if (data)
+		if (data) {
 			_mm_free(data);
+			data = NULL;
+		}
 	}
 };
 enum FORMATS { BMP, JPG, GIF, TIF, PNG };
@@ -74,6 +81,6 @@ enum FORMATS { BMP, JPG, GIF, TIF, PNG };
 #define _GIF L"{557cf402-1a04-11d3-9a73-0000f81ef32e}"
 #define _TIF L"{557cf405-1a04-11d3-9a73-0000f81ef32e}"
 #define _PNG L"{557cf406-1a04-11d3-9a73-0000f81ef32e}"
-void save_image(dataImage& image, const TCHAR* directory_name, const TCHAR* name, size_t format);
-dataImage& load_image(const TCHAR* name, BOOL RGBA);
-std::vector< dataImage>& load_images(const TCHAR* directory,const std::vector<std::vector<TCHAR>>& files, BOOL RGBA);
+void save_image(dataImage* image, const TCHAR* directory_name, const TCHAR* name, size_t format);
+VOID load_image(const TCHAR* name, BOOL RGBA, std::vector<dataImage>* image);
+VOID load_images(const TCHAR* directory, const std::vector<std::vector<TCHAR>>& files, BOOL RGBA, std::vector<dataImage>* image);

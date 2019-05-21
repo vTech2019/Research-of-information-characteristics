@@ -42,16 +42,16 @@ void OpenGL_device::programInfoLog(GLuint shader)
 	}
 }
 
-size_t OpenGL_device::push2DTexture(GLubyte3 * image, GLuint width, GLuint height) {
+size_t OpenGL_device::push2DTexture(GLubyte4 * image, GLuint width, GLuint height) {
 	texture_id.resize(texture_id.size() + 1);
 	glGenTextures(1, &texture_id.back().x);
 	texture_id.back().y = GL_TEXTURE_2D;
 	glBindTexture(GL_TEXTURE_2D, texture_id.back().x);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	return (size_t)& texture_id.back();
@@ -125,6 +125,7 @@ size_t OpenGL_device::pushProgram()
 	GLint number_active_uniforms = 0;
 	GLint max_attributes_name_length = 0;
 	GLint max_uniform_name_length = 0;
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glGetProgramiv(programs.back(), GL_ACTIVE_ATTRIBUTES, &number_active_attributes);
 	glGetProgramiv(programs.back(), GL_ACTIVE_UNIFORMS, &number_active_uniforms);
 	glGetProgramiv(programs.back(), GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_attributes_name_length);
@@ -199,7 +200,7 @@ std::vector<GLuint>::iterator OpenGL_device::pushBuffer(void* data, size_t numbe
 }
 
 void OpenGL_device::pushDrawObjects(size_t number_objects) {
-		this->number_objects.push_back(number_objects);
+	this->number_objects.push_back(number_objects);
 }
 void OpenGL_device::setMouseOldPosition(int2 data) {
 	old_mouse_position = data;
@@ -221,8 +222,8 @@ mat4x4* OpenGL_device::getProjectionMatrix() {
 float4* OpenGL_device::getUpView() {
 	return &Up;
 }
-float4* OpenGL_device::getCenterView() {
-	return &Center;
+float4* OpenGL_device::getFrontView() {
+	return &Front;
 }
 float4* OpenGL_device::getEyeView() {
 	return &Eye;
@@ -230,15 +231,14 @@ float4* OpenGL_device::getEyeView() {
 
 void OpenGL_device::cameraRotate()
 {
-	lookAt(Eye, Up, Center);
+	lookAt(Eye, Up, Front + Eye);
 }
 //GLfloat t_1 = 0.0f;
 //GLfloat t_2 = 0.0f;
 void OpenGL_device::Render() {
-
 	//getEyeView()->x = sin(t_1 += 0.01f) * 5;
 	//getEyeView()->z = cos(t_2 += 0.01f) * 5;
-	//lookAt(Eye, Up, Center);
+	//lookAt(Eye, Up, Front);
 	//rotate(0.001, float4(0, 0, 1, 0));
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -246,6 +246,7 @@ void OpenGL_device::Render() {
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	//glEnableClientState(GL_INDEX_ARRAY);
+	glActiveTexture(GL_TEXTURE0);
 	for (size_t i = 0; i < programs.size(); i++) {
 		if (last_program != programs[i])
 			last_program = programs[i],
@@ -254,28 +255,32 @@ void OpenGL_device::Render() {
 		glUniformMatrix4fv(projection_matrix_index[i], 1, GL_FALSE, (GLfloat*)& projectionMatrix);
 		glUniformMatrix4fv(view_matrix_index[i], 1, GL_FALSE, (GLfloat*)& viewMatrix);
 		glUniformMatrix4fv(model_matrix_index[i], 1, GL_FALSE, (GLfloat*)& modelMatrix);
-		if (texture_id.size() > 0)
-			glBindTexture(texture_id[0].y, texture_id[0].x);
 		for (size_t j = 0; j < vector_buffer.size(); j++) {
+			if (texture_id.size() > j)
+				glBindTexture(texture_id[j].y, texture_id[j].x);
 			glBindBuffer(GL_ARRAY_BUFFER, vector_buffer[j]);
+			glVertexAttribPointer(vertex_index[i], 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(vertex_index[i]);
-			glVertexAttribPointer(vertex_index[i], 4, GL_FLOAT, GL_FALSE, 0, 0);
 			glBindBuffer(GL_ARRAY_BUFFER, color_buffer[j]);
+			glVertexAttribPointer(color_index[i], 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glEnableVertexAttribArray(color_index[i]);
-			glVertexAttribPointer(color_index[i], 4, GL_FLOAT, GL_FALSE, 0, 0);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer[j]); 
-			glEnableVertexAttribArray(texture_index[i]);
+			glBindBuffer(GL_ARRAY_BUFFER, texture_buffer[j]);
 			glVertexAttribPointer(texture_index[i], 2, GL_FLOAT, GL_FALSE, 0, 0);
+			glEnableVertexAttribArray(texture_index[i]);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer[j]);
+
+			//glBindBuffer(GL_ARRAY_BUFFER, texture_buffer[j]);
 			glDrawElements(GL_TRIANGLE_STRIP, number_objects[j], GL_UNSIGNED_INT, NULL);
 		}
 	}
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
-//	glDisableClientState(GL_INDEX_ARRAY);
+	//glDisableClientState(GL_INDEX_ARRAY);
 }
 OpenGL_device::OpenGL_device(HDC hdc)
 {
+	//lookAt(Eye, Up, Front);
 	PIXELFORMATDESCRIPTOR pfd = {
 		sizeof(PIXELFORMATDESCRIPTOR),
 		1,
@@ -304,7 +309,7 @@ OpenGL_device::OpenGL_device(HDC hdc)
 	if (!SetPixelFormat(hdc, nPixelFormat, &pfd)) {
 		MessageBox(NULL, std::to_wstring(GetLastError()).c_str(), L"SetPixelFormat error ", MB_OK);
 		return;
-	}	
+	}
 	//if (int iPixelFormat = GetPixelFormat(hdc)) {
 	//	DescribePixelFormat(hdc, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 	//}
@@ -325,13 +330,14 @@ OpenGL_device::OpenGL_device(HDC hdc)
 	glewExperimental = GL_TRUE;
 	glPointSize(3.0f);
 	glEnable(GL_DEPTH_TEST);
-//	glEnable(GL_CULL_FACE);
+	//	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE);
-//	glDepthFunc(GL_LESS);
+	glEnable(GL_TEXTURE_2D);
+	//	glDepthFunc(GL_LESS);
+
 	GLint NumberOfExtensions;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &NumberOfExtensions);
 	const GLubyte* gl_version = glGetString(GL_VERSION);
-	
 	printf("OpenGL version supported by this platform (%s): \n", gl_version);
 	for (GLint i = 0; i < NumberOfExtensions; i++) {
 		const GLubyte* information = glGetStringi(GL_EXTENSIONS, i);
@@ -341,6 +347,9 @@ OpenGL_device::OpenGL_device(HDC hdc)
 			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 			//glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
 			glDebugMessageCallbackARB(MessageCallback, 0);
+		}
+		if (strcmp((const char*)information, "WGL_EXT_swap_control") == 0) {
+			((BOOL(WINAPI*)(int))wglGetProcAddress("wglSwapIntervalEXT"))(0);
 		}
 	}
 }
@@ -375,66 +384,17 @@ void OpenGL_device::rotate(GLfloat angle, float4 vector) {
 void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 	if (Center == Eye)
 		return;
-	//float fx = Center[0] - Eye[0];
-	//float fy = Center[1] - Eye[1];
-	//float fz = Center[2] - Eye[2];
-
-	//float normalizeVector = 1.0f / sqrtf(fx * fx + fy * fy + fz * fz);
-
-	//fx *= normalizeVector;
-	//fy *= normalizeVector;
-	//fz *= normalizeVector;
-
-	//float sx = fy * Up[2] - fz * Up[1];
-	//float sy = fz * Up[0] - fx * Up[2];
-	//float sz = fx * Up[1] - fy * Up[0];
-
-	//normalizeVector = 1.0f / sqrtf(sx * sx + sy * sy + sz * sz);
-
-	//sx *= normalizeVector;
-	//sy *= normalizeVector;
-	//sz *= normalizeVector;
-
-	//if ((0 == sx) && (0 == sy) && (0 == sz))
-	//	return;
-
-	//float ux = sy * fz - sz * fy;
-	//float uy = sz * fx - sx * fz;
-	//float uz = sx * fy - sy * fx;
-
-	//(!modelMatrix)[0]= sx;
-	//(!modelMatrix)[1] = ux;
-	//(!modelMatrix)[2] = -fx;
-	//(!modelMatrix)[3] = 0.0f;
-
-	//(!modelMatrix)[4] = sy;
-	//(!modelMatrix)[5] = uy;
-	//(!modelMatrix)[6] = -fy;
-	//(!modelMatrix)[7] = 0.0f;
-
-	//(!modelMatrix)[8] = sz;
-	//(!modelMatrix)[9] = uz;
-	//(!modelMatrix)[10] = -fz;
-	//(!modelMatrix)[11] = 0.0f;
-
-	//(!modelMatrix)[12] = 0.0f;
-	//(!modelMatrix)[13] = 0.0f;
-	//(!modelMatrix)[14] = 0.0f;
-	//(!modelMatrix)[15] = 1.0f;
-
-	//(!modelMatrix)[12] += (!modelMatrix)[0] * -Eye[0] + (!modelMatrix)[4] * -Eye[1] + (!modelMatrix)[8] * -Eye[2];
-	//(!modelMatrix)[13] += (!modelMatrix)[1] * -Eye[0] + (!modelMatrix)[5] * -Eye[1] + (!modelMatrix)[9] * -Eye[2];
-	//(!modelMatrix)[14] += (!modelMatrix)[2] * -Eye[0] + (!modelMatrix)[6] * -Eye[1] + (!modelMatrix)[10] * -Eye[2];
-	//(!modelMatrix)[15] += (!modelMatrix)[3] * -Eye[0] + (!modelMatrix)[7] * -Eye[1] + (!modelMatrix)[11] * -Eye[2];
-
-	Up = cross_vec3(normalize_vec3(cross_vec3(Up, normalize_vec3(Eye))), normalize_vec3(Eye));
+	const float4 const normalize_Eye = normalize_vec3(Eye);
+	const float4 const cross_Eye = normalize_vec3(cross_vec3(Up, normalize_Eye));
+	const float4 const cross_Eye_2 = cross_vec3(cross_Eye, normalize_Eye);
+	Up = normalize_vec3(cross_vec3(normalize_vec3(cross_vec3(Up, normalize_Eye)), normalize_Eye));
 
 	//mat4x4 translation;
 	//translation.x.w = -Eye.x;
 	//translation.y.w = -Eye.y;
 	//translation.z.w = -Eye.z;
-	float4 z = normalize_vec3(Eye - Center);
-	float4 x = normalize_vec3(cross_vec3(normalize_vec3(Up), z));
+	float4 z = normalize_vec3(Center - Eye);
+	float4 x = normalize_vec3(cross_vec3(Up, z));
 	float4 y = normalize_vec3(cross_vec3(z, x));
 	modelMatrix.x = { x.x, y.x, z.x, 0.0f };
 	modelMatrix.y = { x.y, y.y, z.y, 0.0f };
@@ -444,7 +404,6 @@ void OpenGL_device::lookAt(float4 Eye, float4 Up, float4 Center) {
 	modelMatrix.y.w += -x.y * Eye.x - y.y * Eye.y - z.y * Eye.z;
 	modelMatrix.z.w += -x.z * Eye.x - y.z * Eye.y - z.z * Eye.z;
 	modelMatrix.w.w += -x.w * Eye.x - y.w * Eye.y - z.w * Eye.z;
-	//modelMatrix.transpose();
 	//modelMatrix.print();
 	//modelMatrix = modelMatrix * translation;
 }
